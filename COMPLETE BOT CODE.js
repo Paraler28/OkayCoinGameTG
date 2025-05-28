@@ -560,3 +560,62 @@ startBot();
 
 // ================== ЭКСПОРТ ==================
 module.exports = { bot, app };
+
+  const keyboard = {
+    inline_keyboard: [
+      [{ text: t('backButton', lang), callback_data: 'back' }]
+    ]
+  };
+
+  await bot.editMessageText(text, {
+    chat_id: chatId,
+    message_id: messageId,
+    reply_markup: keyboard
+  });
+}
+
+// Обработка callback кнопок
+bot.on('callback_query', async query => {
+  const chatId = query.message.chat.id;
+  const messageId = query.message.message_id;
+  const telegramId = query.from.id;
+  const data = query.data;
+
+  let user = getUser(telegramId);
+  if (!user) {
+    user = createUser(telegramId, query.from.username, query.from.first_name);
+  }
+
+  if (data === 'tap') {
+    await handleTap(chatId, messageId, user);
+  } else if (data === 'tasks') {
+    await showTasks(chatId, messageId, user);
+  } else if (data.startsWith('task_')) {
+    const taskId = parseInt(data.replace('task_', ''));
+    await completeTask(chatId, messageId, user, taskId);
+  } else if (data === 'stats') {
+    await showStats(chatId, messageId, user);
+  } else if (data === 'leaderboard') {
+    await showLeaderboard(chatId, messageId, user);
+  } else if (data === 'referrals') {
+    await showReferrals(chatId, messageId, user);
+  } else if (data === 'back') {
+    await showMainMenu(chatId, user, messageId);
+  } else if (data === 'share') {
+    const link = `https://t.me/CryptoOkayBot?start=ref${user.id}`;
+    await bot.answerCallbackQuery(query.id, { text: "🔗 Ваша реферальная ссылка скопирована!" });
+    await bot.sendMessage(chatId, `📤 Приглашайте друзей:\n${link}`);
+  }
+});
+
+// Инициализация заданий и запуск сервера
+initializeTasks();
+
+const app = express();
+app.get('/', (req, res) => {
+  res.send('🤖 OkayCoin Bot работает!');
+});
+app.listen(PORT, () => {
+  console.log(`🚀 Сервер запущен на порту ${PORT}`);
+});
+
